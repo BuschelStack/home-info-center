@@ -1,0 +1,32 @@
+# Node/Vue/Frontend-Entwicklung
+node_modules/
+npm-debug.log
+yarn.lock
+pnpm-lock.yaml
+dist/
+frontend/Vue/node_modules/
+frontend/Vue/dist/
+
+# IDE/Editor
+.vscode/
+.idea/
+*.swp
+
+# Systemdateien
+.DS_Store
+Thumbs.db
+
+# Tests/Build-Artefakte
+coverage/
+*.log
+
+# Weitere sensible Dateien
+*.env.*
+.env.local
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+config/

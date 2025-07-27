@@ -1,0 +1,25 @@
+[
+  {
+    "name": "Primary",
+    "class": "calendar-primary",
+    "display": "Standard"
+  },
+  {
+    "name": "Home",
+    "class": "calendar-home",
+    "display": "Zuhause",
+    "id": "XXXXXXXX@group.calendar.google.com"
+  },
+  {
+    "name": "Familie",
+    "class": "calendar-family",
+    "display": "Familie",
+    "id": "XXXXXXXXXX@group.calendar.google.com"
+  },
+  {
+    "name": "Erinnerung",
+    "class": "calendar-erinnerung",
+    "display": "Erinnerung",
+    "id": "XXXXXXXXXX@group.calendar.google.com"
+  }
+]

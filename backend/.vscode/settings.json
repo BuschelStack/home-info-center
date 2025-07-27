@@ -1,0 +1,61 @@
+{
+  "python.defaultInterpreterPath": "${workspaceFolder}\\backend\\.A\\VENV\\Scripts\\python.exe",
+  "python.terminal.activateEnvironment": true,
+  "python.terminal.launchArgs": [
+    "--no-capture-output"
+  ],
+
+  // 🧪 Linting & Formatierung
+  "python.linting.enabled": true,
+  "python.linting.flake8Enabled": true,
+  "python.linting.flake8Args": [
+    "--max-line-length=120"
+  ],
+  "python.formatting.provider": "black",
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "ms-python.python",
+  "editor.codeActionsOnSave": {
+    "source.organizeImports": true
+  },
+
+  // 🧠 Typprüfung & Analyse
+  "python.analysis.typeCheckingMode": "basic",
+  "python.analysis.diagnosticSeverityOverrides": {
+    "reportMissingImports": "none"
+  },
+  "python.analysis.indexing": true,
+  "python.analysis.autoSearchPaths": true,
+  "python.analysis.useLibraryCodeForTypes": true,
+  "python.analysis.extraPaths": [
+    "${workspaceFolder}/.A/VENV/Lib/site-packages"
+  ],
+
+  // 🧩 Autovervollständigung
+  "python.autoComplete.extraPaths": [
+    "${workspaceFolder}/.A/VENV/Lib/site-packages"
+  ],
+
+  // 🧪 Tests
+  "python.testing.pytestEnabled": true,
+  "python.testing.unittestEnabled": false,
+  "python.testing.pytestArgs": [
+    "${workspaceFolder}/tests"
+  ],
+
+  // 🔐 Umgebungsvariablen
+  "python.envFile": "${workspaceFolder}/.env",
+
+  // 📦 Ausschlüsse für Performance
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/.git/objects/**": true,
+    "**/.git/subtree-cache/**": true
+  },
+  "search.exclude": {
+    "**/node_modules/**": true,
+    "**/.git/**": true
+  },
+
+  // 🧠 Spracheinstellungen
+  "python.languageServer": "Pylance"
+}

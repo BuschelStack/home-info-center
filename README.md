@@ -1,0 +1,162 @@
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+![Python Version](https://img.shields.io/badge/python-3.11-blue.svg)
+![Vue](https://img.shields.io/badge/vue-3.x-4FC08D.svg)
+![Vite](https://img.shields.io/badge/vite-5.x-646CFF.svg)
+
+
+## Lizenz
+
+Dieses Projekt steht unter der [MIT-Lizenz](LICENSE) – © 2025 LWood  
+Nutzung, Weitergabe und Änderung sind erlaubt, solange der ursprüngliche Lizenztext beibehalten wird.
+
+# Dashboard Home Info Center
+
+Ein Dashboard für den Einsatz auf einem Fernseher (z.B. in der Küche), das wichtige Informationen übersichtlich darstellt. Es zeigt aktuelle Anrufe, Termine aus mehreren Google-Kalendern sowie Wettervorhersagen an.
+
+## Features
+
+- **Anrufliste:** Zeigt die letzten Anrufe der FritzBox übersichtlich an (eingehend, ausgehend, verpasst, Anrufbeantworter).
+- **Kalender:** Termine aus mehreren Google-Kalendern werden gruppiert nach Tag dargestellt, mit farblicher Unterscheidung je Kalender.
+- **Wetter:** Stündliche Wettervorhersage für den aktuellen Tag und eine 5-Tage-Vorschau (OpenWeather API).
+- **Tag/Nacht Umschaltung:** Die Anzeige schaltet mit Sonenuntergang von weis in ein helles gelb um um die Augen zu schützen. Bei Sonnenaufgang geht es wieder zurück nach weiß. Einstellbar in .env.
+- **Automatische Aktualisierung:** Das Frontend holt alle 10 Sekunden die gecachten Daten vom Backend ab. Das Backend selber hot die neuen Daten in festgelegten Intervallen von den Quellen ab. Intervalle sind in der .env-Datei einstellbar
+- **Responsive Design:** Auch auf Tablets und kleineren Bildschirmen nutzbar.
+
+## Installation
+
+1. **Repository klonen:**
+   ```bash
+   git clone https://github.com/LWood78/home-info-center.git
+   cd home-info-center
+   ```
+
+2. **Python-Umgebung einrichten:**
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # Windows: venv\Scripts\activate
+   ```
+
+3. **Abhängigkeiten installieren:**
+   
+   ***Backend***
+   ```bash
+   Wechsle in den `backend`-Ordner und installiere die Abhängigkeiten:
+   cd backend
+   pip install -r requirements.txt
+   ```
+   ***Frontend einrichten***
+      Wechsle in den `frontend/Vue`-Ordner und installiere die Abhängigkeiten:
+      ```bash
+      cd ../frontend/Vue
+      npm install
+      ```
+      Frontend bauen:
+      ```bash
+      npm run build
+      ```
+
+4. **.env-Datei anlegen:**  
+   Lege eine Datei `.env` im Ordner `backend` an und trage deine Zugangsdaten ein:
+
+   ```env
+   # OpenWeatherMap
+   OPENWEATHER_API_KEY='96243423f4'           # API Key
+   WEATHER_LOCATION_LAT='48.78'               # Breitengrad deines Standortes
+   WEATHER_LOCATION_LON='11.4'                # Längengrad deines Standortes
+
+   # FritzBox
+   FRITZBOX_USERNAME='testuser'               # Benutzername
+   FRITZBOX_PASSWORD='lorepusum'              # Passwort
+   FRITZBOX_IP_ADDRESS='192.168.178.1'        # IP-Adresse
+
+   # Google Kalender
+   GOOGLE_CALENDAR_CLIENT_SECRET_PATH='config/client_secret.json'  # Pfad zum Client Secret
+   GOOGLE_CALENDAR_TOKEN_PATH='config/token.pickle'                # Pfad zum Token
+   GOOGLE_CALENDAR_CONFIG_PATH='config/calendars.json'             # Pfad zur Konfiguration
+
+   # Intervalle (in Sekunden)
+   INTERVAL_CALENDAR=300                      # Kalenderaktualisierung
+   INTERVAL_CALLS=75                          # Anrufliste (mind. 60 empfohlen)
+   INTERVAL_WEATHER=600                       # Wetteraktualisierung
+
+   # Weitere Einstellungen
+   FRITZBOX_CALLLIST_DAYS=4                   # Tage für die Anrufliste
+   TIMEZONE='Europe/Berlin'                   # Zeitzone für Wetterdaten
+
+   # Theme
+   THEME_DAY_BG='#eaeaeaff'                   # Hintergrundfarbe Tag
+   THEME_DAY_TEXT='#222222'                   # Textfarbe Tag
+   THEME_EVENING_BG='#ffce2dff'               # Hintergrundfarbe Abend
+   THEME_EVENING_TEXT='#2c2200ff'             # Textfarbe Abend
+   ```
+
+5. **Google API einrichten:**  
+   - Gehe zur [Google Cloud Console](https://console.cloud.google.com/).
+   - Erstelle ein neues Projekt oder wähle ein bestehendes aus.
+   - Navigiere zu **APIs & Dienste > Bibliothek** und aktiviere die **Google Calendar API**.
+   - Gehe zu **APIs & Dienste > Anmeldedaten** und klicke auf **Anmeldedaten erstellen > OAuth-Client-ID**.
+   - Wähle **Desktop-App** als Anwendungstyp und erstelle die Anmeldedaten.
+   - Lade die Datei `client_secret.json` herunter und platziere sie im Ordner `backend/config`. Der Ordner `config` muss erstellt werden.
+   - Im `config`-Ordner muss die `calendars.json` aus dem Ordner `config_example` hineinkopiert und mit den eigenen Schlüsseln der Googlekalender einfügen.
+   - Der Ordner `config_example` zeigt die Struktur. Die Datei `token.pickle` wird beim ersten Mal starten des Backends automatisch erstellt. In der `calendars.json` müssen die anzuzeigenden
+
+## Starten
+
+```bash
+Backend starten:
+   cd backend
+   python app.py
+   besser: gunicorn --bind 0.0.0.0:8080 app:app
+```
+
+```bash
+Frontend starten:
+   cd frontend
+   npm run dev
+```
+
+Das Dashboard ist dann unter [http://localhost:3000](http://localhost:3000) erreichbar.
+
+## Verzeichnisstruktur
+
+```plaintext
+Dashboard_Familie/
+├── backend/
+│   ├── app.py
+│   ├── Calendar/
+│   │   └── ...                # Kalender-Integration (Google API)
+│   ├── FritzBox/
+│   │   └── ...                # Anruflisten-Integration (FritzBox)
+│   ├── Weather/
+│   │   └── ...                # Wetterdaten (OpenWeather)
+│   ├── config/
+│   │   ├── client_secret.json
+│   │   ├── token.pickle
+│   │   └── calendars.json
+│   ├── static/
+│   │   └── style.css
+│   └── templates/
+│       └── index.html
+├── frontend/
+│   ├── src/
+│   │   └── ...                # Quellcode des Frontends (Vue)
+│   └── public/
+│       └── ...                # Statische Dateien für das Frontend
+├── requirements.txt
+└── README.md
+```
+> Hinweis: Die tatsächliche Struktur kann je nach Anpassungen leicht variieren.
+
+## Hinweise
+
+- Die Zugangsdaten und API-Keys niemals in ein öffentliches Repository hochladen!
+- Die FritzBox muss im lokalen Netzwerk erreichbar sein.
+  - der FritzBox-Benutzer benötigt nur die Berechtigung auf die Einstellung: Sprachnachrichten, Faxnachrichten, FRITZ!App Fon und Anrufliste (Der Benutzer kann Sprachnachrichten abhören, empfangene Faxe und die Anrufliste ansehen und FRITZ!App Fon nutzen.)
+- Für die Google-Kalender-Integration ist beim ersten Start eine Authentifizierung im  Browser notwendig.
+- Wenn du ein neues Paket installierst, z. B.:
+  - `pip install flask`
+  - Dann aktualisiere die requirements.txt: `pip freeze > requirements.txt`
+  - `git add requirements.txt`
+  - `git commit -m "Add Flask to requirements"`
+  - `git push`
+- 
