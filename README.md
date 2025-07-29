@@ -30,13 +30,59 @@ Ein Dashboard für den Einsatz auf einem Fernseher (z.B. in der Küche), das wic
    cd home-info-center
    ```
 
-2. **Python-Umgebung einrichten:**
+2. **Raspberry Pi Locale auf Deutsch setzen (optional):**
+   Für deutsche Datums- und Zeitformate empfiehlt es sich, die Locale auf Deutsch zu setzen:
+   
+   ```bash
+   # Konfigurationstool öffnen
+   sudo raspi-config
+   ```
+   - Navigation im Menü
+   - Wähle "5 Localisation Options" (oder "Localisierung")
+   - Wähle "L1 Locale"
+   - Deutsche Locale aktivieren
+      - Scrolle in der Liste zu "de_DE.UTF-8 UTF-8"
+      - Markiere sie mit der Leertaste (ein Sternchen * erscheint)
+      - Wichtig: Lasse "en_GB.UTF-8 UTF-8" ebenfalls markiert (als Fallback)
+      - Standard-Locale setzen:
+      - Drücke Tab und dann Enter auf "Ok"
+      - Im nächsten Bildschirm wähle "de_DE.UTF-8" als Standard
+      - Bestätige mit Enter - Fertig
+   - Bei der Frage nach einem Neustart: "Yes"
+
+   **Oder manuell:**
+   ```bash
+   # Deutsche Locale aktivieren
+   sudo dpkg-reconfigure locales
+   # Wähle "de_DE.UTF-8 UTF-8" aus und setze es als Standard
+   
+   # Oder direkt über die Konfigurationsdatei:
+   sudo nano /etc/locale.gen
+   # Entkommentiere die Zeile: de_DE.UTF-8 UTF-8
+   
+   # Locale generieren
+   sudo locale-gen
+   
+   # Standard-Locale setzen
+   sudo update-locale LANG=de_DE.UTF-8
+   
+   # Neustart empfohlen
+   sudo reboot
+   ```
+   
+   **Überprüfung:**
+   ```bash
+   locale
+   # Sollte de_DE.UTF-8 anzeigen
+   ```
+
+3. **Python-Umgebung einrichten:**
    ```bash
    python -m venv venv
    source venv/bin/activate  # Windows: venv\Scripts\activate
    ```
 
-3. **Abhängigkeiten installieren:**
+4. **Abhängigkeiten installieren:**
    
    ***Backend***
    ```bash
@@ -55,7 +101,7 @@ Ein Dashboard für den Einsatz auf einem Fernseher (z.B. in der Küche), das wic
       npm run build
       ```
 
-4. **.env-Datei anlegen:**  
+5. **.env-Datei anlegen:**  
    Lege eine Datei `.env` im Ordner `backend` an und trage deine Zugangsdaten ein:
 
    ```env
@@ -90,7 +136,7 @@ Ein Dashboard für den Einsatz auf einem Fernseher (z.B. in der Küche), das wic
    THEME_EVENING_TEXT='#2c2200ff'             # Textfarbe Abend
    ```
 
-5. **Google API einrichten:**  
+6. **Google API einrichten:**  
    - Gehe zur [Google Cloud Console](https://console.cloud.google.com/).
    - Erstelle ein neues Projekt oder wähle ein bestehendes aus.
    - Navigiere zu **APIs & Dienste > Bibliothek** und aktiviere die **Google Calendar API**.
@@ -159,4 +205,3 @@ Dashboard_Familie/
   - `git add requirements.txt`
   - `git commit -m "Add Flask to requirements"`
   - `git push`
-- 
