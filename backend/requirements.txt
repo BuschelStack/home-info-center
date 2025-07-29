@@ -1,7 +1,11 @@
 Flask==3.1.1
 google_api_python_client==2.176.0
 google_auth_oauthlib==1.2.2
+google-auth>=2.29.0
+google-auth-httplib2>=0.2.0
 python-dotenv==1.1.1
 Requests==2.32.4
+tenacity>=8.2.2
 gunicorn
 pytz
+tzdata

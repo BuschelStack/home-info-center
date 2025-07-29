@@ -1,10 +1,5 @@
 [
   {
-    "name": "Primary",
-    "class": "calendar-primary",
-    "display": "Standard"
-  },
-  {
     "name": "Home",
     "class": "calendar-home",
     "display": "Zuhause",
