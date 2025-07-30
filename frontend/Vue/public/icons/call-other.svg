@@ -1,1 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#888888"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+  <!-- Grüner Hintergrund für aktiven Anruf -->
+  <circle cx="12" cy="12" r="10" fill="#4CAF50"/>
+  
+  <!-- Telefonhörer Icon -->
+  <path d="M8 5C7.5 5 7 5.5 7 6V8C7 8.5 7.5 9 8 9H9C9.5 9 10 8.5 10 8V6C10 5.5 9.5 5 9 5H8Z" fill="white"/>
+  <path d="M15 15C14.5 15 14 15.5 14 16V18C14 18.5 14.5 19 15 19H16C16.5 19 17 18.5 17 18V16C17 15.5 16.5 15 16 15H15Z" fill="white"/>
+  
+  <!-- Geschwungene Verbindungslinie -->
+  <path d="M9.5 8.5Q11.5 10.5 12 12Q12.5 13.5 14.5 15.5" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/>
+  
+  <!-- Aktive Anruf-Signale -->
+  <circle cx="12" cy="12" r="5" fill="none" stroke="white" stroke-width="1" opacity="0.5"/>
+  <circle cx="12" cy="12" r="7" fill="none" stroke="white" stroke-width="0.8" opacity="0.3"/>
+</svg>
