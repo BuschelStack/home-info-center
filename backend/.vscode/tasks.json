@@ -1,0 +1,58 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Backend Terminal mit venv",
+      "type": "shell",
+      "command": "${workspaceFolder}/.A/VENV/Scripts/Activate.ps1",
+      "group": "build",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "new"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Backend starten (mit venv)",
+      "type": "shell",
+      "command": "${workspaceFolder}/.A/VENV/Scripts/python.exe",
+      "args": ["backend/app.py"],
+      "group": "build",
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}/backend"
+        }
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "new"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Abhängigkeiten installieren",
+      "type": "shell",
+      "command": "${workspaceFolder}/.A/VENV/Scripts/pip.exe",
+      "args": ["install", "-r", "backend/requirements.txt"],
+      "group": "build",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    }
+  ]
+}

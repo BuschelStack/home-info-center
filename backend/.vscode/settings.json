@@ -1,5 +1,5 @@
 {
-  "python.defaultInterpreterPath": "${workspaceFolder}\\backend\\.A\\VENV\\Scripts\\python.exe",
+  "python.defaultInterpreterPath": "${workspaceFolder}/venv/Scripts/python.exe",
   "python.terminal.activateEnvironment": true,
   "python.terminal.launchArgs": [
     "--no-capture-output"
@@ -15,7 +15,7 @@
   "editor.formatOnSave": true,
   "editor.defaultFormatter": "ms-python.python",
   "editor.codeActionsOnSave": {
-    "source.organizeImports": true
+    "source.organizeImports": "explicit"
   },
 
   // 🧠 Typprüfung & Analyse
@@ -27,12 +27,12 @@
   "python.analysis.autoSearchPaths": true,
   "python.analysis.useLibraryCodeForTypes": true,
   "python.analysis.extraPaths": [
-    "${workspaceFolder}/.A/VENV/Lib/site-packages"
+    "${workspaceFolder}/venv/Lib/site-packages"
   ],
 
   // 🧩 Autovervollständigung
   "python.autoComplete.extraPaths": [
-    "${workspaceFolder}/.A/VENV/Lib/site-packages"
+    "${workspaceFolder}/venv/Lib/site-packages"
   ],
 
   // 🧪 Tests

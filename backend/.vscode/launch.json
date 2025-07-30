@@ -8,6 +8,7 @@
       "program": "${workspaceFolder}/backend/app.py",
       "console": "integratedTerminal",
       "cwd": "${workspaceFolder}/backend",
+      "python": "${workspaceFolder}/backend/venv/Scripts/python.exe",
       "env": {
         "PYTHONPATH": "${workspaceFolder}/backend"
       }

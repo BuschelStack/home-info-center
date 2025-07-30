@@ -3,11 +3,114 @@
 	"tasks": [
 		{
 			"type": "shell",
-			"label": "Vite Dev Server",
-			"command": "npm run dev",
+			"label": "📦 Dependencies installieren",
+			"command": "npm",
+			"args": ["install"],
 			"group": "build",
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared"
+			},
+			"problemMatcher": []
+		},
+		{
+			"type": "shell",
+			"label": "🚀 Vite Dev Server",
+			"command": "npm",
+			"args": ["run", "dev"],
+			"group": "build",
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": true,
+				"panel": "new"
+			},
 			"problemMatcher": [],
-			"isBackground": true
+			"isBackground": true,
+			"dependsOn": "📦 Dependencies installieren"
+		},
+		{
+			"type": "shell",
+			"label": "🏗️ Frontend Build",
+			"command": "npm",
+			"args": ["run", "build"],
+			"group": "build",
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": true,
+				"panel": "shared"
+			},
+			"problemMatcher": [],
+			"dependsOn": "📦 Dependencies installieren"
+		},
+		{
+			"type": "shell",
+			"label": "👀 Preview Build",
+			"command": "npm",
+			"args": ["run", "preview"],
+			"group": "build",
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": true,
+				"panel": "new"
+			},
+			"problemMatcher": [],
+			"isBackground": true,
+			"dependsOn": "🏗️ Frontend Build"
+		},
+		{
+			"type": "shell",
+			"label": "🧹 Clean node_modules",
+			"command": "Remove-Item",
+			"args": ["-Recurse", "-Force", "node_modules"],
+			"group": "build",
+			"options": {
+				"cwd": "${workspaceFolder}",
+				"shell": {
+					"executable": "pwsh.exe"
+				}
+			},
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared"
+			},
+			"problemMatcher": []
+		},
+		{
+			"type": "shell",
+			"label": "🔄 Fresh Install",
+			"command": "npm",
+			"args": ["install"],
+			"group": "build",
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": true,
+				"panel": "shared"
+			},
+			"problemMatcher": [],
+			"dependsOn": "🧹 Clean node_modules"
 		}
 	]
 }

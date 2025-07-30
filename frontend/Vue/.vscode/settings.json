@@ -2,17 +2,43 @@
   // 🌟 ESLint & Formatierung
   "eslint.validate": ["javascript", "javascriptreact", "vue"],
   "editor.codeActionsOnSave": {
-    "source.fixAll.eslint": true
+    "source.fixAll.eslint": "explicit"
   },
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
 
   // 🧠 Vue & Volar
   "files.associations": {
     "*.vue": "vue"
   },
-
-  // 🚫 Wichtig: keine Vetur-Einträge mehr!
   "vue.enable": true,
   "vue.inlayHints.inlineHandlerLeading": true,
-  "vue.inlayHints.optionsWrapper": true
+  "vue.inlayHints.optionsWrapper": true,
 
+  // 🎨 Emmet für Vue
+  "emmet.includeLanguages": {
+    "vue-html": "html"
+  },
+
+  // 📁 Dateierkennung
+  "files.exclude": {
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/.DS_Store": true
+  },
+
+  // 🔍 Suche
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/package-lock.json": true
+  },
+
+  // 🚀 Terminal
+  "terminal.integrated.defaultProfile.windows": "PowerShell",
+  "terminal.integrated.cwd": "${workspaceFolder}",
+
+  // 🎯 TypeScript (falls Sie später TS hinzufügen)
+  "typescript.preferences.includePackageJsonAutoImports": "auto",
+  "javascript.preferences.includePackageJsonAutoImports": "auto"
 }
