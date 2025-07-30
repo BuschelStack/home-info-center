@@ -77,12 +77,25 @@ Ein Dashboard für den Einsatz auf einem Fernseher (z.B. in der Küche), das wic
    ```
 
 3. **Python-Umgebung einrichten:**
+
+   **Mit VS Code Tasks (Empfohlen):**
+   ```
+   Ctrl+Shift+P → "Tasks: Run Task" → "🚀 Backend: Setup komplett"
+   ```
+   
+   **Manuell:**
    ```bash
    python -m venv venv
    source venv/bin/activate  # Windows: venv\Scripts\activate
    ```
 
 4. **Abhängigkeiten installieren:**
+   
+   **Mit VS Code Tasks (Empfohlen):**
+   - Backend: Bereits durch "🚀 Backend: Setup komplett" erledigt
+   - Frontend: `Ctrl+Shift+P` → "Tasks: Run Task" → "🌐 Frontend: Dependencies installieren"
+   
+   **Manuell:**
    
    ***Backend***
    ```bash
@@ -148,6 +161,50 @@ Ein Dashboard für den Einsatz auf einem Fernseher (z.B. in der Küche), das wic
 
 ## Starten
 
+### 🚀 Mit VS Code Tasks (Empfohlen)
+
+Dieses Projekt ist mit praktischen VS Code Tasks ausgestattet, die die Entwicklung erheblich vereinfachen:
+
+#### **Erstmalige Einrichtung:**
+1. Öffnen Sie das Projekt in VS Code
+2. Drücken Sie `Ctrl+Shift+P` (Command Palette)
+3. Tippen Sie "task" und wählen Sie **"Tasks: Run Task"**
+4. Wählen Sie **"🚀 Backend: Setup komplett (venv + requirements)"**
+   - Erstellt automatisch die virtuelle Umgebung (`backend/venv/`)
+   - Installiert alle Python-Dependencies aus `requirements.txt`
+
+#### **Verfügbare Tasks:**
+
+**🔧 Backend Setup:**
+- **🔧 Backend: Virtuelle Umgebung erstellen** - Erstellt `backend/venv/`
+- **📦 Backend: Requirements installieren** - Installiert Python-Pakete
+- **🚀 Backend: Setup komplett** - Komplette Einrichtung in einem Schritt
+
+**🐍 Backend Development:**
+- **🐍 Backend: Terminal mit venv** - Öffnet Terminal mit aktivierter venv
+- **🐍 Backend: App starten** - Startet den Python-Server
+
+**🌐 Frontend Development:**
+- **🌐 Frontend: Dependencies installieren** - Führt `npm install` aus
+- **🌐 Frontend: Dev Server starten** - Startet Vite Development Server
+- **🌐 Frontend: Build** - Erstellt Production Build
+
+**🚀 Kombinierte Tasks:**
+- **🚀 Beide starten (Backend + Frontend)** - Startet beide Server parallel
+
+#### **Debugging:**
+- **F5** drücken für Backend-Debugging (verwendet automatisch die venv)
+- Breakpoints werden in der IDE unterstützt
+
+#### **Workflow für Development:**
+1. **Einmalig:** `🚀 Backend: Setup komplett` ausführen
+2. **Daily:** `🚀 Beide starten` für paralleles Backend/Frontend Development
+3. **Testing:** `🌐 Frontend: Build` für Production-Test
+
+### 📋 Manueller Start (Alternative)
+
+Alternativ können Sie das Projekt auch manuell starten:
+
 ```bash
 Backend starten:
    cd backend
@@ -162,6 +219,37 @@ Frontend starten:
 ```
 
 Das Dashboard ist dann unter [http://localhost:3000](http://localhost:3000) erreichbar.
+
+## 🛠️ VS Code Development Setup
+
+Dieses Projekt ist vollständig für VS Code optimiert:
+
+### **Automatische Features:**
+- **Virtuelle Umgebung:** Wird automatisch erkannt und aktiviert
+- **Python Linting:** Flake8 mit 120-Zeichen Zeilenlänge
+- **Formatierung:** Black für Python, Prettier für Frontend
+- **IntelliSense:** Vollständige Code-Completion für Python und Vue
+- **Debugging:** F5 startet Backend mit Breakpoint-Unterstützung
+
+### **Ordnerstruktur der Konfigurationen:**
+```
+.vscode/
+├── tasks.json          # Zentrale Tasks für beide Projekte
+backend/.vscode/
+├── settings.json       # Python-spezifische Einstellungen
+├── launch.json         # Debugging-Konfiguration
+└── tasks.json          # Backend-spezifische Tasks
+frontend/Vue/.vscode/
+├── settings.json       # Vue/JS-spezifische Einstellungen
+├── launch.json         # Frontend-Debugging (Chrome)
+└── tasks.json          # Frontend-spezifische Tasks
+```
+
+### **Empfohlene Erweiterungen:**
+- Python (ms-python.python)
+- Vue Language Features (vue.volar)
+- Prettier (esbenp.prettier-vscode)
+- ES6 Syntax (ms-vscode.vscode-typescript-next)
 
 ## Verzeichnisstruktur
 
