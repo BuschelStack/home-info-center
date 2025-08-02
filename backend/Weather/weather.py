@@ -19,8 +19,16 @@ def get_hourly_forecast(latitude=lat, longitude=lon, api_key_param=api_key):
         f'https://api.openweathermap.org/data/3.0/onecall?lat={latitude}&lon={longitude}'
         f'&exclude=current,minutely,daily,alerts&units=metric&lang=de&appid={api_key_param}'
     )
-    response = requests.get(url, timeout=20)
-    response.raise_for_status()
+    try:
+        response = requests.get(url, timeout=20)
+        response.raise_for_status()
+    except requests.exceptions.Timeout:
+        raise ConnectionError("Timeout beim Abrufen der stündlichen Wettervorhersage")
+    except requests.exceptions.ConnectionError as e:
+        raise ConnectionError(f"Verbindungsfehler beim Abrufen der stündlichen Wettervorhersage: {e}")
+    except requests.exceptions.HTTPError as e:
+        raise RuntimeError(f"HTTP-Fehler beim Abrufen der stündlichen Wettervorhersage: {e}")
+    
     data = response.json()
 
     forecast_by_day = defaultdict(list)
@@ -68,8 +76,16 @@ def get_daily_forecast(latitude=lat, longitude=lon, api_key_param=api_key):
         f'https://api.openweathermap.org/data/3.0/onecall?lat={latitude}&lon={longitude}'
         f'&exclude=current,minutely,hourly,alerts&units=metric&lang=de&appid={api_key_param}'
     )
-    response = requests.get(url, timeout=20)
-    response.raise_for_status()
+    try:
+        response = requests.get(url, timeout=20)
+        response.raise_for_status()
+    except requests.exceptions.Timeout:
+        raise ConnectionError("Timeout beim Abrufen der täglichen Wettervorhersage")
+    except requests.exceptions.ConnectionError as e:
+        raise ConnectionError(f"Verbindungsfehler beim Abrufen der täglichen Wettervorhersage: {e}")
+    except requests.exceptions.HTTPError as e:
+        raise RuntimeError(f"HTTP-Fehler beim Abrufen der täglichen Wettervorhersage: {e}")
+    
     data = response.json()
 
     forecast = []

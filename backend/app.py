@@ -54,8 +54,12 @@ def update_calendar_cache():
                 if events != cache['events'] or last_version_date != today_str:
                     cache['events'] = events
                     cache['events_version'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
-        except (ConnectionError, ValueError, RuntimeError) as e:
-            print("Fehler beim Kalenderabruf:", e)
+        except ConnectionError as e:
+            print(f"⚠ Fehler beim Abrufen von Kalender: Keine Internetverbindung verfügbar - {e}")
+        except (ValueError, RuntimeError) as e:
+            print(f"⚠ Fehler beim Kalenderabruf: {e}")
+        except Exception as e:
+            print(f"⚠ Unerwarteter Fehler beim Kalenderabruf: {e}")
         time.sleep(interval_calendar)
 
 def update_calls_cache():
@@ -72,8 +76,12 @@ def update_calls_cache():
                     cache['sid'] = sid
                     cache['calls'] = calls
                     cache['calls_version'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
-        except (ConnectionError, ValueError, RuntimeError) as e:
-            print("Fehler beim FritzBox-Abruf:", e)
+        except ConnectionError as e:
+            print(f"⚠ Netzwerkfehler beim FritzBox-Abruf: {e}")
+        except (ValueError, RuntimeError) as e:
+            print(f"⚠ Fehler beim FritzBox-Abruf: {e}")
+        except Exception as e:
+            print(f"⚠ Unerwarteter Fehler beim FritzBox-Abruf: {e}")
         time.sleep(interval_calls)
 
 def update_weather_cache():
@@ -90,8 +98,12 @@ def update_weather_cache():
                     cache['weather_hourly'] = hourly
                     cache['weather_daily'] = daily
                     cache['weather_version'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
-        except (ConnectionError, ValueError, RuntimeError) as e:
-            print("Fehler beim Wetterabruf:", e)
+        except ConnectionError as e:
+            print(f"⚠ Netzwerkfehler beim Wetterabruf: {e}")
+        except (ValueError, RuntimeError) as e:
+            print(f"⚠ Fehler beim Wetterabruf: {e}")
+        except Exception as e:
+            print(f"⚠ Unerwarteter Fehler beim Wetterabruf: {e}")
         time.sleep(interval_weather)
 
 # Threads starten
