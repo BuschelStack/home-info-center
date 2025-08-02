@@ -25,7 +25,11 @@ _sid_cache = {
 def get_sid(user, pwd, fritzbox_ip):
     """Holt die SID von der FritzBox."""
     url = f"http://{fritzbox_ip}/login_sid.lua"
-    response = requests.get(url, timeout=10)
+    try:
+        response = requests.get(url, timeout=10)
+    except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+        raise ConnectionError(f"Verbindung zur FritzBox fehlgeschlagen: {e}")
+    
     root = ET.fromstring(response.content)
 
     sid = root.findtext('SID')
@@ -35,10 +39,13 @@ def get_sid(user, pwd, fritzbox_ip):
     challenge = root.findtext('Challenge')
     challenge_response = f"{challenge}-{hashlib.md5((challenge + '-' + pwd).encode('utf-16le')).hexdigest()}"
 
-    response = requests.get(url, params={
-        "username": user,
-        "response": challenge_response
-    }, timeout=10)
+    try:
+        response = requests.get(url, params={
+            "username": user,
+            "response": challenge_response
+        }, timeout=10)
+    except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+        raise ConnectionError(f"Verbindung zur FritzBox fehlgeschlagen: {e}")
 
     root = ET.fromstring(response.content)
     sid = root.findtext('SID')
@@ -55,14 +62,19 @@ def get_sid_cached(user, pwd, fritzbox_ip, cache_duration=300):
     sid = get_sid(user, pwd, fritzbox_ip)
     _sid_cache['sid'] = sid
     _sid_cache['timestamp'] = now
-    print("🔐 Neue SID geholt")
+    timestamp_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(now))
+    print(f"🔐 Neue SID geholt - {timestamp_str}")
     return sid
 
 def get_calls_xml(user, pwd, fritzbox_ip):
     """Holt die Anrufliste von der FritzBox als XML-Daten."""
     sid = get_sid_cached(user, pwd, fritzbox_ip)
     url = f"http://{fritzbox_ip}:49000/calllist.lua?sid={sid}"
-    response = requests.get(url, timeout=10)
+    try:
+        response = requests.get(url, timeout=10)
+    except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+        raise ConnectionError(f"Verbindung zur FritzBox Anrufliste fehlgeschlagen: {e}")
+    
     if response.status_code != 200:
         raise RuntimeError("❌ Fehler beim Abrufen der Anrufliste.")
     return parse_calllist_xml(response.content.decode('utf-8'))

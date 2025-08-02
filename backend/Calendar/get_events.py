@@ -9,6 +9,7 @@ from collections import defaultdict
 import os
 import json
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 from google.auth.exceptions import TransportError
 from Calendar.calendar_auth import get_credentials
 from dotenv import load_dotenv
@@ -36,10 +37,15 @@ except locale.Error:
 def internet_verfügbar():
     """Prüft, ob Internetverbindung durch Namensauflösung verfügbar ist."""
     try:
+        # Set a timeout for socket operations to avoid hanging
+        socket.setdefaulttimeout(5)
         socket.gethostbyname("google.com")
         return True
     except socket.error:
         return False
+    finally:
+        # Reset timeout to default
+        socket.setdefaulttimeout(None)
 
 def load_calendar_ids(json_path=calendar_config_path):
     if not os.path.exists(json_path):
@@ -60,7 +66,7 @@ def format_event_start(start_str):
             return start_str
 
 @retry(
-    retry=retry_if_exception_type(TransportError),
+    retry=retry_if_exception_type((TransportError, HttpError, ConnectionError)),
     wait=wait_exponential(multiplier=1, min=5, max=60),
     stop=stop_after_attempt(5),
     reraise=True
