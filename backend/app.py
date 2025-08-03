@@ -44,66 +44,113 @@ cache_lock = threading.Lock()
 def update_calendar_cache():
     """Update the calendar cache with events from Google Calendar."""
     while True:
+        # Always check for date changes, even if data fetch fails
+        today_str = time.strftime('%Y-%m-%d', time.localtime())
+        with cache_lock:
+            last_version_date = str(cache['events_version'])[:10] if cache['events_version'] else None
+            date_changed = last_version_date != today_str
+        
         try:
             events = get_all_events()
-            today_str = time.strftime('%Y-%m-%d', time.localtime())
             with cache_lock:
-                # Extrahiere das Datum aus der aktuellen Version (falls gesetzt)
-                last_version_date = str(cache['events_version'])[:10] if cache['events_version'] else None
                 # Wenn sich Events geändert haben ODER das Datum gewechselt hat, aktualisiere Cache
-                if events != cache['events'] or last_version_date != today_str:
+                if events != cache['events'] or date_changed:
                     cache['events'] = events
                     cache['events_version'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
         except ConnectionError as e:
             print(f"⚠ Fehler beim Abrufen von Kalender: Keine Internetverbindung verfügbar - {e}")
+            # Even if fetching fails, update version if date changed to trigger frontend refresh
+            if date_changed:
+                with cache_lock:
+                    cache['events_version'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
         except (ValueError, RuntimeError) as e:
             print(f"⚠ Fehler beim Kalenderabruf: {e}")
+            # Even if fetching fails, update version if date changed to trigger frontend refresh
+            if date_changed:
+                with cache_lock:
+                    cache['events_version'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
         except Exception as e:
             print(f"⚠ Unerwarteter Fehler beim Kalenderabruf: {e}")
+            # Even if fetching fails, update version if date changed to trigger frontend refresh
+            if date_changed:
+                with cache_lock:
+                    cache['events_version'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
         time.sleep(interval_calendar)
 
 def update_calls_cache():
     """Update the call cache with grouped calls from FritzBox."""
     while True:
+        # Always check for date changes, even if data fetch fails
+        today_str = time.strftime('%Y-%m-%d', time.localtime())
+        with cache_lock:
+            last_version_date = str(cache['calls_version'])[:10] if cache['calls_version'] else None
+            date_changed = last_version_date != today_str
+        
         try:
             sid = get_sid_cached(username, password, router_ip)
             calls = get_calls_grouped(username, password)
-            today_str = time.strftime('%Y-%m-%d', time.localtime())
             with cache_lock:
-                last_version_date = str(cache['calls_version'])[:10] if cache['calls_version'] else None
                 # Aktualisiere, wenn sich Calls/SID geändert haben ODER das Datum gewechselt hat
-                if calls != cache['calls'] or sid != cache['sid'] or last_version_date != today_str:
+                if calls != cache['calls'] or sid != cache['sid'] or date_changed:
                     cache['sid'] = sid
                     cache['calls'] = calls
                     cache['calls_version'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
         except ConnectionError as e:
             print(f"⚠ Netzwerkfehler beim FritzBox-Abruf: {e}")
+            # Even if fetching fails, update version if date changed to trigger frontend refresh
+            if date_changed:
+                with cache_lock:
+                    cache['calls_version'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
         except (ValueError, RuntimeError) as e:
             print(f"⚠ Fehler beim FritzBox-Abruf: {e}")
+            # Even if fetching fails, update version if date changed to trigger frontend refresh
+            if date_changed:
+                with cache_lock:
+                    cache['calls_version'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
         except Exception as e:
             print(f"⚠ Unerwarteter Fehler beim FritzBox-Abruf: {e}")
+            # Even if fetching fails, update version if date changed to trigger frontend refresh
+            if date_changed:
+                with cache_lock:
+                    cache['calls_version'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
         time.sleep(interval_calls)
 
 def update_weather_cache():
     """Update the weather cache with hourly and daily forecasts."""
     while True:
+        # Always check for date changes, even if data fetch fails
+        today_str = time.strftime('%Y-%m-%d', time.localtime())
+        with cache_lock:
+            last_version_date = str(cache['weather_version'])[:10] if cache['weather_version'] else None
+            date_changed = last_version_date != today_str
+        
         try:
             hourly = get_hourly_forecast()
             daily = get_daily_forecast()
-            today_str = time.strftime('%Y-%m-%d', time.localtime())
             with cache_lock:
-                last_version_date = str(cache['weather_version'])[:10] if cache['weather_version'] else None
                 # Aktualisiere, wenn sich Wetterdaten geändert haben ODER das Datum gewechselt hat
-                if hourly != cache['weather_hourly'] or daily != cache['weather_daily'] or last_version_date != today_str:
+                if hourly != cache['weather_hourly'] or daily != cache['weather_daily'] or date_changed:
                     cache['weather_hourly'] = hourly
                     cache['weather_daily'] = daily
                     cache['weather_version'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
         except ConnectionError as e:
             print(f"⚠ Netzwerkfehler beim Wetterabruf: {e}")
+            # Even if fetching fails, update version if date changed to trigger frontend refresh
+            if date_changed:
+                with cache_lock:
+                    cache['weather_version'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
         except (ValueError, RuntimeError) as e:
             print(f"⚠ Fehler beim Wetterabruf: {e}")
+            # Even if fetching fails, update version if date changed to trigger frontend refresh
+            if date_changed:
+                with cache_lock:
+                    cache['weather_version'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
         except Exception as e:
             print(f"⚠ Unerwarteter Fehler beim Wetterabruf: {e}")
+            # Even if fetching fails, update version if date changed to trigger frontend refresh
+            if date_changed:
+                with cache_lock:
+                    cache['weather_version'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
         time.sleep(interval_weather)
 
 # Threads starten
