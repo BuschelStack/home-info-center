@@ -26,7 +26,7 @@ Ein Dashboard für den Einsatz auf einem Fernseher (z.B. in der Küche), das wic
 
 1. **Repository klonen:**
    ```bash
-   git clone https://github.com/LWood78/home-info-center.git
+   git clone https://github.com/BuschelStack/home-info-center.git
    cd home-info-center
    ```
 
