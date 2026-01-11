@@ -1,0 +1,18 @@
+# Code owners for home-info-center repository
+# These owners will be automatically requested for review when someone opens a pull request.
+
+# Global owners
+* @BuschelStack
+
+# Backend (Python/Flask)
+/backend/ @BuschelStack
+
+# Frontend (Vue)
+/frontend/ @BuschelStack
+
+# CI/CD and workflows
+/.github/ @BuschelStack
+
+# Docker configuration
+/Dockerfile @BuschelStack
+/.dockerignore @BuschelStack
