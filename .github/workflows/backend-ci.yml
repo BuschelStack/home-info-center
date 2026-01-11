@@ -1,0 +1,106 @@
+name: Backend CI
+
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-ci.yml"
+  pull_request:
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-ci.yml"
+
+jobs:
+  test:
+    name: Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11"]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+          cache-dependency-path: "backend/requirements.txt"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f backend/requirements.txt ]; then
+            pip install -r backend/requirements.txt
+          elif [ -f backend/pyproject.toml ]; then
+            pip install .
+          fi
+        working-directory: .
+
+      - name: Check for flake8
+        id: check-flake8
+        run: |
+          if pip show flake8 > /dev/null 2>&1; then
+            echo "available=true" >> $GITHUB_OUTPUT
+          else
+            echo "available=false" >> $GITHUB_OUTPUT
+            echo "⚠️ flake8 not found - skipping lint"
+          fi
+
+      - name: Lint with flake8
+        if: steps.check-flake8.outputs.available == 'true'
+        run: |
+          flake8 backend/ --count --max-line-length=120 --statistics --show-source
+        continue-on-error: false
+
+      - name: Check for black
+        id: check-black
+        run: |
+          if pip show black > /dev/null 2>&1; then
+            echo "available=true" >> $GITHUB_OUTPUT
+          else
+            echo "available=false" >> $GITHUB_OUTPUT
+            echo "⚠️ black not found - skipping format check"
+          fi
+
+      - name: Check formatting with black
+        if: steps.check-black.outputs.available == 'true'
+        run: |
+          black --check --line-length=120 backend/
+        continue-on-error: false
+
+      - name: Check for mypy
+        id: check-mypy
+        run: |
+          if pip show mypy > /dev/null 2>&1; then
+            echo "available=true" >> $GITHUB_OUTPUT
+          else
+            echo "available=false" >> $GITHUB_OUTPUT
+            echo "⚠️ mypy not found - skipping type check"
+          fi
+
+      - name: Type check with mypy
+        if: steps.check-mypy.outputs.available == 'true'
+        run: |
+          mypy backend/ --ignore-missing-imports
+        continue-on-error: false
+
+      - name: Check for pytest
+        id: check-pytest
+        run: |
+          if pip show pytest > /dev/null 2>&1; then
+            echo "available=true" >> $GITHUB_OUTPUT
+          else
+            echo "available=false" >> $GITHUB_OUTPUT
+            echo "⚠️ pytest not found - skipping tests"
+          fi
+
+      - name: Test with pytest
+        if: steps.check-pytest.outputs.available == 'true'
+        run: |
+          pytest backend/ -v
+        continue-on-error: false

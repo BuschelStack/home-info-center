@@ -1,0 +1,82 @@
+name: Frontend CI
+
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend-ci.yml"
+  pull_request:
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend-ci.yml"
+
+jobs:
+  build:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "lts/*"
+          cache: "npm"
+          cache-dependency-path: "frontend/Vue/package-lock.json"
+
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+        working-directory: frontend/Vue
+
+      - name: Check for ESLint
+        id: check-eslint
+        run: |
+          if npm list eslint > /dev/null 2>&1 || [ -f .eslintrc.js ] || [ -f .eslintrc.json ] || [ -f eslint.config.js ]; then
+            echo "available=true" >> $GITHUB_OUTPUT
+          else
+            echo "available=false" >> $GITHUB_OUTPUT
+            echo "⚠️ ESLint not configured - skipping lint"
+          fi
+        working-directory: frontend/Vue
+
+      - name: Lint with ESLint
+        if: steps.check-eslint.outputs.available == 'true'
+        run: npm run lint
+        working-directory: frontend/Vue
+        continue-on-error: false
+
+      - name: Build project
+        run: npm run build
+        working-directory: frontend/Vue
+
+      - name: Check for test script
+        id: check-tests
+        run: |
+          if npm run | grep -q "test"; then
+            echo "available=true" >> $GITHUB_OUTPUT
+          else
+            echo "available=false" >> $GITHUB_OUTPUT
+            echo "⚠️ No test script found - skipping tests"
+          fi
+        working-directory: frontend/Vue
+
+      - name: Run tests
+        if: steps.check-tests.outputs.available == 'true'
+        run: npm test
+        working-directory: frontend/Vue
+        continue-on-error: false
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: frontend/Vue/dist
+          retention-days: 7
