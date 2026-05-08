@@ -1,48 +1,69 @@
+# syntax=docker/dockerfile:1.7
+
 # ----- STAGE 1: Build Vue frontend -----
-FROM node:20-alpine AS frontend-builder
+FROM node:22-alpine AS frontend-builder
 
-WORKDIR /app
-
-COPY frontend/Vue/ ./frontend/
 WORKDIR /app/frontend
 
-RUN npm install && npm run build
+COPY frontend/Vue/package*.json ./
+RUN npm ci --no-audit --no-fund
 
-# ----- STAGE 2: Build Python backend -----
-FROM python:3.12-slim AS backend
+COPY frontend/Vue/ ./
+RUN npm run build
 
-# 🧩 System-Locales installieren und konfigurieren (Deutsch)
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends locales && \
-    sed -i '/de_DE.UTF-8/s/^# //g' /etc/locale.gen && \
-    locale-gen && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+# ----- STAGE 2: Python runtime -----
+FROM python:3.13-slim AS backend
 
-# 🌐 Setze das deutsche Locale als Standard
-ENV LANG=de_DE.UTF-8 \
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=1 \
+    LANG=de_DE.UTF-8 \
     LANGUAGE=de_DE:de \
-    LC_ALL=de_DE.UTF-8
+    LC_ALL=de_DE.UTF-8 \
+    TZ=Europe/Berlin
 
-# Install gunicorn and flask
-RUN pip install --no-cache-dir flask gunicorn
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends locales tzdata curl tini \
+ && sed -i '/de_DE.UTF-8/s/^# //g' /etc/locale.gen \
+ && locale-gen \
+ && ln -sf /usr/share/zoneinfo/Europe/Berlin /etc/localtime \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
 
-# Set workdir and copy backend
+# non-root user
+RUN groupadd --system --gid 1000 app \
+ && useradd --system --uid 1000 --gid app --create-home --shell /bin/bash app
+
 WORKDIR /app
 
 COPY backend/requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy backend files directly into /app/backend
-COPY backend/ /app/backend/
-COPY --from=frontend-builder /app/frontend/dist /app/backend/static/
+COPY --chown=app:app backend/ /app/backend/
+COPY --from=frontend-builder --chown=app:app /app/frontend/dist /app/backend/static/
 
 WORKDIR /app/backend
 
-# Set environment variables (optional)
-ENV FLASK_APP=app.py
+USER app
 
-# Expose Flask/Gunicorn port
+ENV FLASK_APP=app.py \
+    PYTHONPATH=/app/backend \
+    HOST=0.0.0.0 \
+    PORT=8080
+
 EXPOSE 8080
 
-# Start Gunicorn server
-CMD ["gunicorn", "-b", "0.0.0.0:8080", "app:app"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+    CMD curl --fail --silent http://127.0.0.1:8080/api/health || exit 1
+
+ENTRYPOINT ["/usr/bin/tini", "--"]
+
+CMD ["gunicorn", \
+     "--bind", "0.0.0.0:8080", \
+     "--workers", "2", \
+     "--threads", "4", \
+     "--timeout", "60", \
+     "--access-logfile", "-", \
+     "--error-logfile", "-", \
+     "app:app"]

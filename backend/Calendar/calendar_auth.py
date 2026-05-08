@@ -1,37 +1,57 @@
-# backend/Calendar/calendar_auth.py
-import os
+"""Google Calendar OAuth credential handling."""
+
+from __future__ import annotations
+
 import pickle
+from typing import TYPE_CHECKING
+
+from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
-from dotenv import load_dotenv
 
-load_dotenv()  # .env-Datei einlesen
+from config import settings
+from logging_config import get_logger
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from google.oauth2.credentials import Credentials
+
+logger = get_logger(__name__)
+
+SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"]
 
 
-SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
+def get_credentials() -> Credentials:
+    """Load cached credentials, refreshing or running OAuth flow if needed."""
+    token_path: Path = settings.calendar_token_path
+    client_secret_path: Path = settings.calendar_client_secret_path
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    creds: Credentials | None = None
+    if token_path.exists():
+        with token_path.open("rb") as fh:
+            creds = pickle.load(fh)
 
-def get_abs_path(path_from_env):
-    """Convert a relative path from the environment variable to an absolute path."""
-    if not os.path.isabs(path_from_env):
-        return os.path.abspath(os.path.join(BASE_DIR, '..', path_from_env))
-    return path_from_env
+    if creds and creds.valid:
+        return creds
 
-token_path = get_abs_path(os.getenv("GOOGLE_CALENDAR_TOKEN_PATH"))
-client_secret_path = get_abs_path(os.getenv("GOOGLE_CALENDAR_CLIENT_SECRET_PATH"))
+    if creds and creds.expired and creds.refresh_token:
+        try:
+            creds.refresh(Request())
+            _persist(creds, token_path)
+            return creds
+        except Exception as e:
+            logger.warning("Token refresh failed, re-authenticating: %s", e)
 
-def get_credentials():
-    """Holt die Google Calendar API Anmeldeinformationen."""
-    creds = None
+    if not client_secret_path.exists():
+        raise FileNotFoundError(f"Google client secret not found at {client_secret_path}")
 
-    if os.path.exists(token_path):
-        with open(token_path, 'rb') as token:
-            creds = pickle.load(token)
-    else:
-        flow = InstalledAppFlow.from_client_secrets_file(client_secret_path, SCOPES)
-        creds = flow.run_local_server(port=8080)  # Browser sollte sich öffnen
-        # Ordner ggf. erstellen, falls nicht vorhanden
-        os.makedirs(os.path.dirname(token_path), exist_ok=True)
-        with open(token_path, 'wb') as token:
-            pickle.dump(creds, token)
+    flow = InstalledAppFlow.from_client_secrets_file(str(client_secret_path), SCOPES)
+    creds = flow.run_local_server(port=8080)
+    _persist(creds, token_path)
     return creds
+
+
+def _persist(creds: Credentials, path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("wb") as fh:
+        pickle.dump(creds, fh)

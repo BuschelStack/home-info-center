@@ -1,32 +1,47 @@
-# Node/Vue/Frontend-Entwicklung
-node_modules/
-npm-debug.log
-yarn.lock
-pnpm-lock.yaml
-dist/
-frontend/Vue/node_modules/
-frontend/Vue/dist/
+# VCS
+.git/
+.gitignore
+.gitattributes
 
-# IDE/Editor
+# CI / IDE
+.github/
 .vscode/
 .idea/
 *.swp
 
-# Systemdateien
-.DS_Store
-Thumbs.db
+# Node / Vue
+**/node_modules/
+**/dist/
+npm-debug.log
+yarn.lock
+pnpm-lock.yaml
 
-# Tests/Build-Artefakte
-coverage/
-*.log
-
-# Weitere sensible Dateien
-*.env.*
-.env.local
-venv/
-__pycache__/
+# Python
+**/__pycache__/
 *.pyc
 *.pyo
 *.pyd
+*.egg-info/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Secrets
 .env
-config/
+.env.*
+!.env_example
+backend/config/
+**/client_secret.json
+**/token.pickle
+
+# Misc
+.DS_Store
+Thumbs.db
+*.log
+coverage/
+htmlcov/
+LICENSE/
+README.md
+*.md

@@ -1,266 +1,188 @@
-# --- Backend Flask App ---
-# Diese Datei ist Teil des Dashboards für die Familie.
-import traceback        
-import os
-import time
-import threading
-from collections import OrderedDict
+"""Flask application entry point.
+
+* Single ``create_app`` factory (testable).
+* ETag-based cache validation – clients send ``If-None-Match`` and receive
+  ``304 Not Modified`` when their copy is current. Replaces the legacy
+  ``/api/<x>-version`` polling endpoints (BREAKING change).
+* Server-Sent Events stream at ``/api/stream`` for live invalidation.
+* Background updates run via APScheduler (see ``cache_service``).
+"""
+
+from __future__ import annotations
+
 import json
-from flask import Flask, Response, jsonify, send_from_directory
-from dotenv import load_dotenv
-from FritzBox.fritzbox_calllist import get_calls_grouped, get_sid_cached
+import time
+from datetime import datetime
+from typing import TYPE_CHECKING
+
+from flask import Flask, Response, jsonify, request, send_from_directory
+
+from cache_service import CacheJob, cache_service
 from Calendar.get_events import get_all_events
-from Weather.weather import get_hourly_forecast, get_daily_forecast
+from config import settings
+from FritzBox.fritzbox_calllist import get_calls_grouped
+from logging_config import configure_logging, get_logger
+from Weather.weather import get_daily_forecast, get_hourly_forecast
 
-# --- .env laden ---
-load_dotenv()
-
-username = os.getenv('FRITZBOX_USERNAME')
-password = os.getenv('FRITZBOX_PASSWORD')
-router_ip = os.getenv("FRITZBOX_IP_ADDRESS")
-
-interval_calendar = int(os.getenv("INTERVAL_CALENDAR", "120"))
-interval_calls = int(os.getenv("INTERVAL_CALLS", "300"))
-interval_weather = int(os.getenv("INTERVAL_WEATHER", "600"))
-
-# --- Flask App ---
-app = Flask(__name__)
-
-# --- Cache ---
-cache = {
-    'events': {},
-    'events_version': 0,
-    'calls': {},
-    'calls_version': 0,
-    'sid': None,
-    'weather_hourly': {},
-    'weather_daily': [],
-    'weather_version': 0,
-    'last_update': 0
-}
-cache_lock = threading.Lock()
-
-# --- Cache Updater Threads ---
-def update_calendar_cache():
-    """Update the calendar cache with events from Google Calendar."""
-    while True:
-        # Always check for date changes, even if data fetch fails
-        today_str = time.strftime('%Y-%m-%d', time.localtime())
-        with cache_lock:
-            last_version_date = str(cache['events_version'])[:10] if cache['events_version'] else None
-            date_changed = last_version_date != today_str
-        
-        try:
-            events = get_all_events()
-            with cache_lock:
-                # Wenn sich Events geändert haben ODER das Datum gewechselt hat, aktualisiere Cache
-                if events != cache['events'] or date_changed:
-                    cache['events'] = events
-                    cache['events_version'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
-        except ConnectionError as e:
-            print(f"⚠ Fehler beim Abrufen von Kalender: Keine Internetverbindung verfügbar - {e}")
-            # Even if fetching fails, update version if date changed to trigger frontend refresh
-            if date_changed:
-                with cache_lock:
-                    cache['events_version'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
-        except (ValueError, RuntimeError) as e:
-            print(f"⚠ Fehler beim Kalenderabruf: {e}")
-            # Even if fetching fails, update version if date changed to trigger frontend refresh
-            if date_changed:
-                with cache_lock:
-                    cache['events_version'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
-        except Exception as e:
-            print(f"⚠ Unerwarteter Fehler beim Kalenderabruf: {e}")
-            # Even if fetching fails, update version if date changed to trigger frontend refresh
-            if date_changed:
-                with cache_lock:
-                    cache['events_version'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
-        time.sleep(interval_calendar)
-
-def update_calls_cache():
-    """Update the call cache with grouped calls from FritzBox."""
-    while True:
-        # Always check for date changes, even if data fetch fails
-        today_str = time.strftime('%Y-%m-%d', time.localtime())
-        with cache_lock:
-            last_version_date = str(cache['calls_version'])[:10] if cache['calls_version'] else None
-            date_changed = last_version_date != today_str
-        
-        try:
-            sid = get_sid_cached(username, password, router_ip)
-            calls = get_calls_grouped(username, password)
-            with cache_lock:
-                # Aktualisiere, wenn sich Calls/SID geändert haben ODER das Datum gewechselt hat
-                if calls != cache['calls'] or sid != cache['sid'] or date_changed:
-                    cache['sid'] = sid
-                    cache['calls'] = calls
-                    cache['calls_version'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
-        except ConnectionError as e:
-            print(f"⚠ Netzwerkfehler beim FritzBox-Abruf: {e}")
-            # Even if fetching fails, update version if date changed to trigger frontend refresh
-            if date_changed:
-                with cache_lock:
-                    cache['calls_version'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
-        except (ValueError, RuntimeError) as e:
-            print(f"⚠ Fehler beim FritzBox-Abruf: {e}")
-            # Even if fetching fails, update version if date changed to trigger frontend refresh
-            if date_changed:
-                with cache_lock:
-                    cache['calls_version'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
-        except Exception as e:
-            print(f"⚠ Unerwarteter Fehler beim FritzBox-Abruf: {e}")
-            # Even if fetching fails, update version if date changed to trigger frontend refresh
-            if date_changed:
-                with cache_lock:
-                    cache['calls_version'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
-        time.sleep(interval_calls)
-
-def update_weather_cache():
-    """Update the weather cache with hourly and daily forecasts."""
-    while True:
-        # Always check for date changes, even if data fetch fails
-        today_str = time.strftime('%Y-%m-%d', time.localtime())
-        with cache_lock:
-            last_version_date = str(cache['weather_version'])[:10] if cache['weather_version'] else None
-            date_changed = last_version_date != today_str
-        
-        try:
-            hourly = get_hourly_forecast()
-            daily = get_daily_forecast()
-            with cache_lock:
-                # Aktualisiere, wenn sich Wetterdaten geändert haben ODER das Datum gewechselt hat
-                if hourly != cache['weather_hourly'] or daily != cache['weather_daily'] or date_changed:
-                    cache['weather_hourly'] = hourly
-                    cache['weather_daily'] = daily
-                    cache['weather_version'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
-        except ConnectionError as e:
-            print(f"⚠ Netzwerkfehler beim Wetterabruf: {e}")
-            # Even if fetching fails, update version if date changed to trigger frontend refresh
-            if date_changed:
-                with cache_lock:
-                    cache['weather_version'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
-        except (ValueError, RuntimeError) as e:
-            print(f"⚠ Fehler beim Wetterabruf: {e}")
-            # Even if fetching fails, update version if date changed to trigger frontend refresh
-            if date_changed:
-                with cache_lock:
-                    cache['weather_version'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
-        except Exception as e:
-            print(f"⚠ Unerwarteter Fehler beim Wetterabruf: {e}")
-            # Even if fetching fails, update version if date changed to trigger frontend refresh
-            if date_changed:
-                with cache_lock:
-                    cache['weather_version'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
-        time.sleep(interval_weather)
-
-# Threads starten
-threading.Thread(target=update_calendar_cache, daemon=True).start()
-threading.Thread(target=update_calls_cache, daemon=True).start()
-threading.Thread(target=update_weather_cache, daemon=True).start()
-
-# --- Flask Routes ---
-@app.route('/')
-def index():
-    """Render the main index page."""   
-    return send_from_directory("static", "index.html")
-
-@app.route('/<path:path>')
-def static_proxy(path):
-    """Statische Dateien ausliefern (z.B. für JS, CSS, Icons)."""
-    return send_from_directory('static', path)
-
-@app.errorhandler(404)
-def not_found(e):
-    """Fehlerseite für nicht gefundene Ressourcen."""
-    return send_from_directory("static", "index.html")
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
-# --- Version Endpunkte ---
-@app.route('/api/events-version')
-def api_events_version():
-    """Return the version of the cached events data.""" 
-    with cache_lock:
-        return jsonify({'version': cache['events_version']})
+def _json_default(obj):
+    if isinstance(obj, datetime):
+        return obj.isoformat()
+    raise TypeError(f"Cannot serialise {type(obj).__name__}")
 
-@app.route('/api/calls-version')
-def api_calls_version():
-    """Return the version of the cached calls data."""  
-    with cache_lock:
-        return jsonify({'version': cache['calls_version']})
 
-@app.route('/api/weather-version')
-def api_weather_version():
-    """Return the version of the cached weather data."""
-    with cache_lock:
-        return jsonify({'version': cache['weather_version']})
+def _json_response(payload, etag: str, status: int = 200) -> Response:
+    """Jsonify with ETag/Cache-Control headers."""
+    body = json.dumps(payload, ensure_ascii=False, default=_json_default)
+    resp = Response(body, status=status, mimetype="application/json")
+    if etag:
+        resp.headers["ETag"] = etag
+    resp.headers["Cache-Control"] = "no-cache"
+    return resp
 
-@app.route('/api/events')
-def api_events():
-    """Return the cached calendar events as JSON."""
-    with cache_lock:
-        return jsonify({
-            'data': cache['events'],
-            'version': cache['events_version']
-        })
 
-@app.route('/api/calls')
-def api_calls():
-    """Return the cached FritzBox calls as JSON."""
-    with cache_lock:
-        sid = cache['sid']
-        grouped_calls = cache['calls']
-        version = cache['calls_version']
-    try:
-        serialized = OrderedDict()
-        for day, calls in grouped_calls.items():
-            serialized[day] = []
-            for call in calls:
-                c = call.copy()
-                if hasattr(c['date'], 'isoformat'):
-                    c['date'] = c['date'].isoformat()
-                serialized[day].append(c)
-        return Response(json.dumps({'sid': sid, 'calls': serialized, 'version': version}, ensure_ascii=False), mimetype='application/json')
-    except (TypeError, AttributeError, KeyError) as e:
-        print("Fehler in /api/calls:", e)
-        traceback.print_exc()
-        return Response('{"error":"Interner Serverfehler"}', status=500, mimetype='application/json')
+def _conditional(name: str, payload_builder):
+    """Helper for ETag-aware GET endpoints."""
+    entry = cache_service.get(name)
+    if not entry.etag:
+        return _json_response(
+            {"error": f"{name} not yet available", "detail": entry.last_error},
+            etag="",
+            status=503,
+        )
+    if request.headers.get("If-None-Match") == entry.etag:
+        resp = Response(status=304)
+        resp.headers["ETag"] = entry.etag
+        return resp
+    return _json_response(payload_builder(entry), entry.etag)
 
-@app.route('/api/weather')
-def api_weather():
-    """Return the cached weather data as JSON."""
-    if not cache['weather_hourly'] or not cache['weather_daily']:
-        return Response('{"error":"Wetterdaten nicht verfügbar"}', status=503, mimetype='application/json')
-    with cache_lock:
-        return jsonify({
-            'weekly_weather': cache['weather_hourly'],
-            'daily_weather': cache['weather_daily'],
-            'version': cache['weather_version']
-        })
 
-@app.route('/api/config')
-def get_config():
-    """Return the current weather location configuration with console logging for env values."""
-    lat = os.environ.get("WEATHER_LOCATION_LAT", 48.137)
-    lon = os.environ.get("WEATHER_LOCATION_LON", 11.575)
-    theme_day_bg = os.environ.get("THEME_DAY_BG", '#eaeaeaff')
-    theme_day_text = os.environ.get("THEME_DAY_TEXT", '#222222')
-    theme_evening_bg = os.environ.get("THEME_EVENING_BG", '#ffeebbff')
-    theme_evening_text = os.environ.get("THEME_EVENING_TEXT", '#3a2c00')
-    return jsonify({
-        "lat": float(lat),
-        "lon": float(lon),
-        "theme_day_bg": theme_day_bg,
-        "theme_day_text": theme_day_text,
-        "theme_evening_bg": theme_evening_bg,
-        "theme_evening_text": theme_evening_text,
-    })
+def _register_jobs() -> None:
+    cache_service.register(
+        CacheJob(
+            name="events",
+            fetch=get_all_events,
+            interval_seconds=settings.interval_calendar,
+        )
+    )
+    cache_service.register(
+        CacheJob(
+            name="calls",
+            fetch=get_calls_grouped,
+            interval_seconds=settings.interval_calls,
+        )
+    )
+    cache_service.register(
+        CacheJob(
+            name="weather",
+            fetch=lambda: {
+                "weekly_weather": get_hourly_forecast(),
+                "daily_weather": get_daily_forecast(),
+            },
+            interval_seconds=settings.interval_weather,
+        )
+    )
 
-@app.route('/api/calendars')
-def get_calendars():
-    """Return the calendars configuration as JSON."""
-    config_dir = os.path.join(os.path.dirname(__file__), 'config')
-    return send_from_directory(config_dir, 'calendars.json', mimetype='application/json')
 
-if __name__ == '__main__':
-    # Start the Flask app
-    app.run(debug=True, host='0.0.0.0', port=8080)
+def create_app() -> Flask:
+    configure_logging(settings.log_level)
+    logger = get_logger(__name__)
+    app = Flask(__name__, static_folder="static", static_url_path="")
+
+    _register_jobs()
+    cache_service.start()
+    logger.info("home-info-center backend ready")
+
+    # --- static / SPA fallback ---------------------------------------------------
+
+    @app.route("/")
+    def index() -> Response:
+        return send_from_directory("static", "index.html")
+
+    @app.errorhandler(404)
+    def _spa_fallback(_e):
+        return send_from_directory("static", "index.html")
+
+    # --- data endpoints ----------------------------------------------------------
+
+    @app.route("/api/events")
+    def api_events():
+        return _conditional("events", lambda e: {"data": e.data, "etag": e.etag})
+
+    @app.route("/api/calls")
+    def api_calls():
+        return _conditional("calls", lambda e: {"calls": e.data, "etag": e.etag})
+
+    @app.route("/api/weather")
+    def api_weather():
+        return _conditional("weather", lambda e: {**e.data, "etag": e.etag})
+
+    @app.route("/api/calendars")
+    def api_calendars() -> Response:
+        path: Path = settings.calendar_config_path
+        if not path.exists():
+            return Response('{"error":"calendars.json not found"}', status=404, mimetype="application/json")
+        return send_from_directory(str(path.parent), path.name, mimetype="application/json")
+
+    @app.route("/api/config")
+    def api_config():
+        return jsonify(
+            {
+                "lat": settings.weather_location_lat,
+                "lon": settings.weather_location_lon,
+                "theme_day_bg": settings.theme_day_bg,
+                "theme_day_text": settings.theme_day_text,
+                "theme_evening_bg": settings.theme_evening_bg,
+                "theme_evening_text": settings.theme_evening_text,
+            }
+        )
+
+    # --- health & observability -------------------------------------------------
+
+    @app.route("/api/health")
+    def api_health():
+        snapshot = cache_service.snapshot()
+        all_ready = all(v["has_data"] for v in snapshot.values())
+        status = 200 if all_ready else 503
+        return jsonify({"status": "ok" if all_ready else "degraded", "caches": snapshot}), status
+
+    # --- live update stream (SSE) -----------------------------------------------
+
+    @app.route("/api/stream")
+    def api_stream():
+        def event_generator():
+            queue = cache_service.subscribe()
+            try:
+                # Initial keep-alive comment
+                yield ": connected\n\n"
+                while True:
+                    try:
+                        msg = queue.get(timeout=25)
+                        yield (f"event: cache-updated\ndata: {json.dumps(msg)}\n\n")
+                    except Exception:
+                        # heartbeat to keep the connection alive
+                        yield f": ping {int(time.time())}\n\n"
+            finally:
+                cache_service.unsubscribe(queue)
+
+        return Response(
+            event_generator(),
+            mimetype="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "X-Accel-Buffering": "no",
+                "Connection": "keep-alive",
+            },
+        )
+
+    return app
+
+
+app = create_app()
+
+
+if __name__ == "__main__":
+    app.run(host=settings.host, port=settings.port, debug=False)

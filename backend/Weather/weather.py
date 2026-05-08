@@ -1,107 +1,103 @@
-# backend/Weather/weather.py    
-import os
-from datetime import datetime, timedelta
+"""OpenWeather One-Call API client (hourly + daily forecasts)."""
+
+from __future__ import annotations
+
 from collections import defaultdict
-import requests             
-from dotenv import load_dotenv
-import pytz
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
-load_dotenv()  # .env-Datei einlesen
+import requests
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
+
+from config import settings
+from logging_config import get_logger
+
+logger = get_logger(__name__)
+
+_session = requests.Session()
+_session.headers.update({"User-Agent": "home-info-center/2.0"})
+_DEFAULT_TIMEOUT = 20
+
+_BASE_URL = "https://api.openweathermap.org/data/3.0/onecall"
 
 
-api_key = os.getenv('OPENWEATHER_API_KEY')
-lat = os.getenv('WEATHER_LOCATION_LAT')
-lon = os.getenv('WEATHER_LOCATION_LON')
+class WeatherConfigError(RuntimeError):
+    """Weather API configuration is incomplete."""
 
-def get_hourly_forecast(latitude=lat, longitude=lon, api_key_param=api_key):
-    """Holt die stündliche Wettervorhersage für die nächsten 6 Stunden."""  
-    url = (
-        f'https://api.openweathermap.org/data/3.0/onecall?lat={latitude}&lon={longitude}'
-        f'&exclude=current,minutely,daily,alerts&units=metric&lang=de&appid={api_key_param}'
-    )
+
+@retry(
+    retry=retry_if_exception_type((requests.RequestException,)),
+    wait=wait_exponential(multiplier=1, min=2, max=20),
+    stop=stop_after_attempt(3),
+    reraise=True,
+)
+def _fetch(exclude: str) -> dict:
+    if not settings.openweather_api_key:
+        raise WeatherConfigError("OPENWEATHER_API_KEY not set")
+    params = {
+        "lat": settings.weather_location_lat,
+        "lon": settings.weather_location_lon,
+        "exclude": exclude,
+        "units": "metric",
+        "lang": "de",
+        "appid": settings.openweather_api_key,
+    }
     try:
-        response = requests.get(url, timeout=20)
+        response = _session.get(_BASE_URL, params=params, timeout=_DEFAULT_TIMEOUT)
         response.raise_for_status()
-    except requests.exceptions.Timeout:
-        raise ConnectionError("Timeout beim Abrufen der stündlichen Wettervorhersage")
+    except requests.exceptions.Timeout as e:
+        raise ConnectionError(f"Weather API timeout: {e}") from e
     except requests.exceptions.ConnectionError as e:
-        raise ConnectionError(f"Verbindungsfehler beim Abrufen der stündlichen Wettervorhersage: {e}")
+        raise ConnectionError(f"Weather API connection error: {e}") from e
     except requests.exceptions.HTTPError as e:
-        raise RuntimeError(f"HTTP-Fehler beim Abrufen der stündlichen Wettervorhersage: {e}")
-    
-    data = response.json()
-
-    forecast_by_day = defaultdict(list)
-    timezone_str = os.getenv('TIMEZONE', 'Europe/Berlin')
-    tz = pytz.timezone(timezone_str)
-    jetzt = datetime.now(tz)
-    ende = jetzt + timedelta(hours=6)
-
-    for hour in data['hourly']:
-        dt = datetime.fromtimestamp(hour['dt'], tz)
-        if not (jetzt <= dt <= ende):
-            continue  # nur die nächsten 6 Stunden behalten
-
-        tag_iso = dt.strftime('%Y-%m-%d')
-        zeit = dt.strftime('%H:%M')
-        beschreibung = hour['weather'][0]['description'].capitalize()
-        temperatur = hour['temp']
-        icon = f"http://openweathermap.org/img/wn/{hour['weather'][0]['icon']}@2x.png"
-
-        forecast_by_day[tag_iso].append({
-            'zeit': zeit,
-            'beschreibung': beschreibung,
-            'temperatur': temperatur,
-            'icon': icon
-        })
-
-    # Reihenfolge: Heute zuerst, dann morgen, dann Rest
-    heute = datetime.now(tz).strftime('%Y-%m-%d')
-    morgen = (datetime.now(tz) + timedelta(days=1)).strftime('%Y-%m-%d')
-    ordered = {}
-    if heute in forecast_by_day:
-        ordered[heute] = forecast_by_day[heute]
-    if morgen in forecast_by_day:
-        ordered[morgen] = forecast_by_day[morgen]
-    for tag in sorted(forecast_by_day.keys()):
-        if tag != heute and tag != morgen:
-            ordered[tag] = forecast_by_day[tag]
-    return ordered
+        raise RuntimeError(f"Weather API HTTP error: {e}") from e
+    return response.json()
 
 
+def get_hourly_forecast() -> dict[str, list[dict]]:
+    """Return hourly forecast for the next 6 hours, grouped by day (YYYY-MM-DD)."""
+    data = _fetch(exclude="current,minutely,daily,alerts")
+    tz = ZoneInfo(settings.timezone)
+    now = datetime.now(tz)
+    end = now + timedelta(hours=6)
 
-def get_daily_forecast(latitude=lat, longitude=lon, api_key_param=api_key):
-    """Holt die tägliche Wettervorhersage für die nächsten 5 Tage."""
-    url = (
-        f'https://api.openweathermap.org/data/3.0/onecall?lat={latitude}&lon={longitude}'
-        f'&exclude=current,minutely,hourly,alerts&units=metric&lang=de&appid={api_key_param}'
-    )
-    try:
-        response = requests.get(url, timeout=20)
-        response.raise_for_status()
-    except requests.exceptions.Timeout:
-        raise ConnectionError("Timeout beim Abrufen der täglichen Wettervorhersage")
-    except requests.exceptions.ConnectionError as e:
-        raise ConnectionError(f"Verbindungsfehler beim Abrufen der täglichen Wettervorhersage: {e}")
-    except requests.exceptions.HTTPError as e:
-        raise RuntimeError(f"HTTP-Fehler beim Abrufen der täglichen Wettervorhersage: {e}")
-    
-    data = response.json()
+    forecast_by_day: dict[str, list[dict]] = defaultdict(list)
+    for hour in data.get("hourly", []):
+        dt = datetime.fromtimestamp(hour["dt"], tz)
+        if not (now <= dt <= end):
+            continue
+        day_iso = dt.strftime("%Y-%m-%d")
+        forecast_by_day[day_iso].append(
+            {
+                "zeit": dt.strftime("%H:%M"),
+                "beschreibung": hour["weather"][0]["description"].capitalize(),
+                "temperatur": hour["temp"],
+                "icon": f"https://openweathermap.org/img/wn/{hour['weather'][0]['icon']}@2x.png",
+            }
+        )
 
-    forecast = []
-    for day in data['daily'][:4]:
-        tag = datetime.fromtimestamp(day['dt']).strftime('%A, %d. %B')
-        beschreibung = day['weather'][0]['description'].capitalize()
-        temp_min = round(day['temp']['min'])
-        temp_max = round(day['temp']['max'])
-        icon = f"http://openweathermap.org/img/wn/{day['weather'][0]['icon']}@4x.png"
+    return dict(sorted(forecast_by_day.items()))
 
-        forecast.append({
-            'tag': tag,
-            'beschreibung': beschreibung,
-            'temp_min': temp_min,
-            'temp_max': temp_max,
-            'icon': icon
-        })
 
+def get_daily_forecast() -> list[dict]:
+    """Return daily forecast for the next 4 days."""
+    data = _fetch(exclude="current,minutely,hourly,alerts")
+    tz = ZoneInfo(settings.timezone)
+    forecast: list[dict] = []
+    for day in data.get("daily", [])[:4]:
+        dt = datetime.fromtimestamp(day["dt"], tz)
+        forecast.append(
+            {
+                "tag": dt.strftime("%Y-%m-%d"),
+                "beschreibung": day["weather"][0]["description"].capitalize(),
+                "temp_min": round(day["temp"]["min"]),
+                "temp_max": round(day["temp"]["max"]),
+                "icon": f"https://openweathermap.org/img/wn/{day['weather'][0]['icon']}@4x.png",
+            }
+        )
     return forecast

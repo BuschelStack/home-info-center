@@ -1,9 +1,9 @@
 # Umgebungsvariablen und sensible Daten
 .env
 .env.*
-.env.local
+!.env_example
 
-# Konfigurations- und Secrets-Ordner
+# Secrets/Konfig
 backend/config/
 
 # Python
@@ -12,29 +12,31 @@ __pycache__/
 *.pyo
 .mypy_cache/
 .pytest_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+.venv/
 venv/
+*.egg-info/
 
-# Node/Vue-Frontend (Passe ggf. den Pfad an!)
-frontend/node_modules/
-frontend/dist/
-frontend/Vue/node_modules/
-frontend/Vue/dist/
+# Node/Vue
 node_modules/
 dist/
-
-# IDE/Editor
-.idea/
-*.swp
-
-# Systemdateien
-.DS_Store
-Thumbs.db
-
-# Logs und Coverage
-*.log
-coverage/
-
-# Paketmanager-Locks (optional)
 npm-debug.log
 yarn.lock
 pnpm-lock.yaml
+
+# Build & Logs
+build/
+*.log
+
+# IDE
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+coverage/
