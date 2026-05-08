@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@tanstack/vue-query": "^5.100.9",
-    "pinia": "^2.2.6",
+    "pinia": "^3.0.4",
     "vue": "^3.5.34"
   },
   "devDependencies": {
