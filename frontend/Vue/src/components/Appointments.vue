@@ -7,29 +7,27 @@
       </div>
     </div>
     <div id="appointments-content">
-      <div v-if="loading" class="loader">
-        <span class="spinner"></span>
+      <div v-if="isLoading" class="loader">
+        <span class="spinner" aria-hidden="true"></span>
         Daten werden geladen…
       </div>
       <div v-else-if="error" class="error">Fehler beim Laden der Termine</div>
       <template v-else>
-        <div v-if="!sortedDates.length" class="no-data">
-          Keine Daten vorhanden
-        </div>
+        <div v-if="!sortedDates.length" class="no-data">Keine Daten vorhanden</div>
         <template v-else>
-            <div v-for="date in sortedDates" :key="date" class="calendar-date-group">
-              <div class="calendar-date">{{ formatGermanDateWithWeekday(date) }}</div>
-              <div
-                v-for="event in appointments[date]"
-                :key="event.title + event.start_time"
-                :class="['calendar-event', calendarClass(event)]"
+          <div v-for="date in sortedDates" :key="date" class="calendar-date-group">
+            <div class="calendar-date">{{ formatGermanDateWithWeekday(date) }}</div>
+            <div
+              v-for="event in appointments[date]"
+              :key="event.title + event.start_time"
+              :class="['calendar-event', calendarClass(event)]"
             >
               <div class="event-row">
-              <span class="event-time">{{ eventTime(event) }}</span>
-              <span class="event-title">{{ event.title || '(kein Titel)' }}</span>
+                <span class="event-time">{{ eventTime(event) }}</span>
+                <span class="event-title">{{ event.title || '(kein Titel)' }}</span>
               </div>
             </div>
-            </div>
+          </div>
         </template>
       </template>
     </div>
@@ -37,40 +35,18 @@
 </template>
 
 <script setup>
-
-
 import { computed, ref, onMounted } from 'vue'
-import { formatGermanDateWithWeekday } from '../utils/dateUtils'
-import { useVersionedQuery } from '../composables/useVersionedQuery'
+import { formatGermanDateWithWeekday } from '../utils/dateUtils.js'
+import { useApiQuery } from '../composables/useApiQuery.js'
+import { fetchJson } from '../utils/api.js'
 
-// Kalender-Definitionen dynamisch laden
 const calendarMap = ref({})
 
-async function loadCalendars() {
-  try {
-    const res = await fetch('/api/calendars', { cache: 'no-store' })
-    if (!res.ok) throw new Error('Fehler beim Laden der Kalenderdefinitionen')
-    const calendars = await res.json()
-    // Erzeuge Map: Name → CSS-Klasse (oder nutze .class, .color etc.)
-    const map = {}
-    calendars.forEach(cal => {
-      // z.B. { "name": "Familie", "class": "calendar-family" }
-      if (cal.name && cal.class) map[cal.name] = cal.class
-    })
-    calendarMap.value = map
-  } catch (e) {
-    // Fallback: leere Map
-    calendarMap.value = {}
-  }
-}
-
-onMounted(loadCalendars)
 function normalize(str) {
-  // Unicode-Normalisierung, entferne Sonderzeichen/Umlaute/Leerzeichen
   return String(str || '')
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // entferne diakritische Zeichen
-    .replace(/[^\w]/g, '') // nur Buchstaben/Zahlen/Unterstrich
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\w]/g, '')
     .toLowerCase()
 }
 
@@ -79,41 +55,47 @@ function calendarClass(event) {
   let calName = event.calendar
   if (Array.isArray(calName)) calName = calName[0]
   if (typeof calName === 'object' && calName !== null) calName = calName.name || ''
-  const normCalName = normalize(calName)
-  if (normCalName && Object.keys(map).length) {
-    const found = Object.keys(map).find(
-      key => normalize(key) === normCalName
-    )
+  const norm = normalize(calName)
+  if (norm && Object.keys(map).length) {
+    const found = Object.keys(map).find((key) => normalize(key) === norm)
     if (found) return map[found]
   }
   return 'calendar-home'
 }
+
 function eventTime(event) {
-  if (event.start_time)
+  if (event.start_time) {
     return event.end_time ? `${event.start_time} – ${event.end_time}` : event.start_time
+  }
   return '(ganztägig)'
 }
 
-const { data, isLoading, error } = useVersionedQuery({
-  versionUrl: '/api/events-version',
-  dataUrl: '/api/events',
-  queryKey: 'events',
-  select: d => d.data
+onMounted(async () => {
+  try {
+    const calendars = await fetchJson('/api/calendars')
+    const map = {}
+    calendars.forEach((cal) => {
+      if (cal.name && cal.class) map[cal.name] = cal.class
+    })
+    calendarMap.value = map
+  } catch {
+    calendarMap.value = {}
+  }
 })
 
-const appointments = computed(() => data.value || {})
-const sortedDates = computed(() => Object.keys(appointments.value).sort((a, b) => {
-  const [da, ma, ya] = a.split('.')
-  const [db, mb, yb] = b.split('.')
-  return new Date(parseInt(ya), parseInt(ma) - 1, parseInt(da)) - new Date(parseInt(yb), parseInt(mb) - 1, parseInt(db))
-}))
-const lastUpdate = computed(() => {
-  if (!data.value) return '–'
-  return new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-})
-const loading = isLoading
+const { data, isLoading, error, dataUpdatedAt } = useApiQuery('events', '/api/events')
+
+const appointments = computed(() => data.value?.data || {})
+const sortedDates = computed(() =>
+  Object.keys(appointments.value).sort((a, b) => new Date(a) - new Date(b))
+)
+const lastUpdate = computed(() =>
+  dataUpdatedAt.value
+    ? new Date(dataUpdatedAt.value).toLocaleTimeString('de-DE', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      })
+    : '–'
+)
 </script>
-
-<style>
-/* Bereichsspezifische Styles können hier ergänzt werden */
-</style>

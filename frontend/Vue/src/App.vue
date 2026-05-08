@@ -1,62 +1,62 @@
 <template>
   <div :class="themeClass">
-    <div id="update-status" v-show="isWideScreen">
+    <header v-show="isWideScreen" id="update-status">
       <div id="status-date">{{ formattedDate }}</div>
-    </div>
-    <div class="container">
+    </header>
+
+    <main class="container">
       <CallList />
       <Appointments />
       <Weather />
-    </div>
-    <!-- Overlay bei Verbindungsproblemen -->
-    <div v-if="!apiOk" class="connection-lost-overlay">
-      <div class="overlay-content">
-        <span class="icon">&#9888;</span>
-        <h2>Verbindung verloren</h2>
-        <p>Das Dashboard kann keine Verbindung zum Server herstellen.</p>
-        <div class="spinner"></div>
-        <p>Neuer Verbindungsversuch in {{ countdown }} Sekunden ...</p>
+    </main>
+
+    <transition name="fade">
+      <div v-if="!connection.isOnline" class="connection-lost-overlay" role="alert" aria-live="assertive">
+        <div class="overlay-content">
+          <span class="icon" aria-hidden="true">&#9888;</span>
+          <h2>Verbindung verloren</h2>
+          <p>Das Dashboard kann den Server nicht erreichen.</p>
+          <div class="spinner" aria-hidden="true"></div>
+          <p>Versuche {{ connection.failedChecks }} – wird automatisch neu verbunden …</p>
+        </div>
       </div>
-    </div>
+    </transition>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { getFormattedDate } from './utils/dateUtils.js'
-import { loadConfig } from './utils/configLoader'
+import { loadConfig } from './utils/configLoader.js'
+import { themeClass, startThemeInterval, stopThemeInterval } from './utils/themeUtils.js'
+import { useConnectionStore } from './stores/connection.js'
+import { useCacheStream } from './composables/useCacheStream.js'
+import { useWakeLock } from './composables/useWakeLock.js'
 
 import CallList from './components/CallList.vue'
 import Appointments from './components/Appointments.vue'
 import Weather from './components/Weather.vue'
 
+const connection = useConnectionStore()
+
 const formattedDate = ref(getFormattedDate(true))
+const isWideScreen = ref(typeof window !== 'undefined' && window.innerWidth > 1400)
 
 let dateIntervalId
-
-// Responsive: isWideScreen
-const isWideScreen = ref(window.innerWidth > 1400)
 function checkScreen() {
   isWideScreen.value = window.innerWidth > 1400
 }
 
-
-import { themeClass, startThemeInterval } from './utils/themeUtils.js'
+useCacheStream()
+useWakeLock()
 
 onMounted(async () => {
-  await loadConfig()     
-  startThemeInterval() 
+  await loadConfig()
+  startThemeInterval()
 
   dateIntervalId = setInterval(() => {
     formattedDate.value = getFormattedDate(true)
-  }, 60 * 1000)
-
-  checkApi()
-  checkIntervalId = setInterval(() => {
-    if (apiOk.value) {
-      checkApi()
-    }
-  }, 10000) // alle 10 Sekunden, aber nur wenn Verbindung ok
+  }, 60_000)
 
   window.addEventListener('resize', checkScreen)
   checkScreen()
@@ -64,60 +64,15 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   clearInterval(dateIntervalId)
-  clearInterval(checkIntervalId)
-  clearInterval(countdownIntervalId)
+  stopThemeInterval()
   window.removeEventListener('resize', checkScreen)
 })
-
-// Verbindung prüfen
-const apiOk = ref(true)
-const countdown = ref(10)
-let checkIntervalId
-let countdownIntervalId
-
-function checkApi() {
-  fetch('/api/events', { cache: 'no-store' })
-    .then(res => {
-      if (!res.ok) throw new Error()
-      if (!apiOk.value) {
-        // Verbindung wurde gerade wiederhergestellt → Seite neu laden
-        apiOk.value = true
-        countdown.value = 10
-        setTimeout(() => {
-          window.location.reload()
-        }, 200) // kleiner Delay, um State-Änderung zu ermöglichen (200 ms)
-        return
-      }
-      apiOk.value = true
-      countdown.value = 10
-    })
-    .catch(() => {
-      apiOk.value = false
-      startCountdown()
-    })
-}
-
-function startCountdown() {
-  clearInterval(countdownIntervalId)
-  countdown.value = 10
-  countdownIntervalId = setInterval(() => {
-    countdown.value--
-    if (countdown.value <= 0) {
-      clearInterval(countdownIntervalId)
-      checkApi()
-    }
-  }, 1000)
-}
-
 </script>
 
 <style>
-/* Layout-spezifische Styles können hier ergänzt werden */
-
-
 .connection-lost-overlay {
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
+  inset: 0;
   background: rgba(30, 41, 59, 0.95);
   color: #fff;
   display: flex;
@@ -129,7 +84,7 @@ function startCountdown() {
 
 .overlay-content {
   text-align: center;
-  background: rgba(255,255,255,0.05);
+  background: rgba(255, 255, 255, 0.05);
   border-radius: 1rem;
   padding: 2.5rem 1.9rem 1.9rem 1.9rem;
   box-shadow: 0 0.5rem 2rem 0 rgba(31, 38, 135, 0.37);
@@ -164,9 +119,28 @@ function startCountdown() {
   animation: spin 1s linear infinite;
   display: inline-block;
 }
+
 @keyframes spin {
-  0% { transform: rotate(0deg);}
-  100% { transform: rotate(360deg);}
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+  }
+}
 </style>
