@@ -1,5 +1,5 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-![Python Version](https://img.shields.io/badge/python-3.11-blue.svg)
+![Python Version](https://img.shields.io/badge/python-3.12+-blue.svg)
 ![Vue](https://img.shields.io/badge/vue-3.x-4FC08D.svg)
 ![Vite](https://img.shields.io/badge/vite-5.x-646CFF.svg)
 
@@ -19,7 +19,7 @@ Ein Dashboard für den Einsatz auf einem Fernseher (z.B. in der Küche), das wic
 - **Kalender:** Termine aus mehreren Google-Kalendern werden gruppiert nach Tag dargestellt, mit farblicher Unterscheidung je Kalender.
 - **Wetter:** Stündliche Wettervorhersage für den aktuellen Tag und eine 5-Tage-Vorschau (OpenWeather API).
 - **Tag/Nacht Umschaltung:** Die Anzeige schaltet mit Sonenuntergang von weis in ein helles gelb um um die Augen zu schützen. Bei Sonnenaufgang geht es wieder zurück nach weiß. Einstellbar in .env.
-- **Automatische Aktualisierung:** Das Frontend holt alle 10 Sekunden die gecachten Daten vom Backend ab. Das Backend selber hot die neuen Daten in festgelegten Intervallen von den Quellen ab. Intervalle sind in der .env-Datei einstellbar
+- **Automatische Aktualisierung:** Das Backend lädt die Daten in einstellbaren Intervallen (`.env`) von den Quellen und cached sie. Das Frontend wird über einen Server-Sent-Events-Stream (`/api/stream`) sofort über Änderungen informiert; die Datenendpunkte nutzen ETags (`304 Not Modified`), sodass nur tatsächlich geänderte Daten übertragen werden.
 - **Responsive Design:** Auch auf Tablets und kleineren Bildschirmen nutzbar.
 
 ## Installation
@@ -158,6 +158,13 @@ Ein Dashboard für den Einsatz auf einem Fernseher (z.B. in der Küche), das wic
    - Lade die Datei `client_secret.json` herunter und platziere sie im Ordner `backend/config`. Der Ordner `config` muss erstellt werden.
    - Im `config`-Ordner muss die `calendars.json` aus dem Ordner `config_example` hineinkopiert und mit den eigenen Schlüsseln der Googlekalender einfügen.
    - Der Ordner `config_example` zeigt die Struktur. Die Datei `token.pickle` wird beim ersten Mal starten des Backends automatisch erstellt. In der `calendars.json` müssen die anzuzeigenden
+
+   > **Headless / Docker:** Der OAuth-Login öffnet einen Browser und funktioniert daher nur auf einem interaktiven Rechner. Für Server ohne Browser den Token einmalig lokal erzeugen und anschließend `config/token.pickle` ins Deployment mounten:
+   >
+   > ```bash
+   > cd backend
+   > python -m Calendar.generate_token
+   > ```
 
 ## Starten
 

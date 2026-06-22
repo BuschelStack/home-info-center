@@ -10,9 +10,11 @@
 
 from __future__ import annotations
 
+import atexit
 import json
 import time
 from datetime import datetime
+from queue import Empty
 from typing import TYPE_CHECKING
 
 from flask import Flask, Response, jsonify, request, send_from_directory
@@ -94,6 +96,7 @@ def create_app() -> Flask:
 
     _register_jobs()
     cache_service.start()
+    atexit.register(cache_service.shutdown)
     logger.info("home-info-center backend ready")
 
     # --- static / SPA fallback ---------------------------------------------------
@@ -162,7 +165,7 @@ def create_app() -> Flask:
                     try:
                         msg = queue.get(timeout=25)
                         yield (f"event: cache-updated\ndata: {json.dumps(msg)}\n\n")
-                    except Exception:
+                    except Empty:
                         # heartbeat to keep the connection alive
                         yield f": ping {int(time.time())}\n\n"
             finally:

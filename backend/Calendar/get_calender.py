@@ -1,6 +1,9 @@
-from googleapiclient.discovery import build
 import datetime
+
+from googleapiclient.discovery import build
+
 from Calendar.calendar_auth import get_credentials
+
 
 def get_upcoming_events(n=10):
     creds = get_credentials()
