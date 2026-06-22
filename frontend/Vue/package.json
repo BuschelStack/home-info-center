@@ -16,21 +16,26 @@
   },
   "dependencies": {
     "@tanstack/vue-query": "^5.100.9",
-    "pinia": "^2.2.6",
+    "pinia": "^3.0.4",
     "vue": "^3.5.34"
   },
   "devDependencies": {
     "@eslint/js": "^9.16.0",
     "@vitejs/plugin-vue": "^6.0.6",
-    "@vitest/coverage-v8": "^2.1.8",
+    "@vitest/coverage-v8": "^4.1.5",
     "@vue/test-utils": "^2.4.6",
     "esbuild": "^0.28.0",
-    "eslint": "^9.16.0",
-    "eslint-plugin-vue": "^9.32.0",
-    "jsdom": "^25.0.1",
+    "eslint": "^10.3.0",
+    "eslint-plugin-vue": "^10.9.1",
+    "jsdom": "^29.1.1",
     "prettier": "^3.4.2",
     "vite": "^8.0.11",
     "vite-plugin-pwa": "^1.3.0",
-    "vitest": "^2.1.8"
+    "vitest": "^4.1.5"
+  },
+  "optionalDependencies": {
+    "@rolldown/binding-linux-x64-gnu": "^1.0.0-rc.18",
+    "@rollup/rollup-linux-x64-gnu": "^4.60.3",
+    "lightningcss-linux-x64-gnu": "^1.32.0"
   }
 }
