@@ -59,10 +59,14 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
 
 ENTRYPOINT ["/usr/bin/tini", "--"]
 
+# NOTE: exactly ONE worker on purpose – the in-process APScheduler and the
+# SSE pub/sub registry are process-local. Multiple workers would duplicate
+# every upstream fetch (FritzBox lockout / OpenWeather rate-limit) and split
+# the SSE subscriber set. Scale via threads, not workers.
 CMD ["gunicorn", \
      "--bind", "0.0.0.0:8080", \
-     "--workers", "2", \
-     "--threads", "4", \
+     "--workers", "1", \
+     "--threads", "8", \
      "--timeout", "60", \
      "--access-logfile", "-", \
      "--error-logfile", "-", \

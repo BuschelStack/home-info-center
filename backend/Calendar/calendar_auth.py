@@ -45,8 +45,12 @@ def get_credentials() -> Credentials:
     if not client_secret_path.exists():
         raise FileNotFoundError(f"Google client secret not found at {client_secret_path}")
 
+    # port=0 -> pick a free ephemeral port (avoids clashing with the app on 8080).
+    # Note: ``run_local_server`` opens a browser and therefore only works on an
+    # interactive machine. In headless deployments (Docker) generate the token
+    # beforehand with ``python -m Calendar.generate_token`` and mount it.
     flow = InstalledAppFlow.from_client_secrets_file(str(client_secret_path), SCOPES)
-    creds = flow.run_local_server(port=8080)
+    creds = flow.run_local_server(port=0)
     _persist(creds, token_path)
     return creds
 

@@ -2,8 +2,9 @@
  * Composable that listens to the backend SSE stream and invalidates
  * Vue Query caches when the server announces an update.
  *
- * Falls back to interval-based refetch when EventSource is unavailable
- * or the connection drops.
+ * On connection loss it marks the connection store offline and keeps
+ * retrying via EventSource reconnect (every RECONNECT_DELAY_MS) until
+ * the stream is back.
  */
 import { onBeforeUnmount, onMounted } from 'vue'
 import { useQueryClient } from '@tanstack/vue-query'
